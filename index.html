@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Online Search Agent</title>
+  <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    /* Estilos personalizados */
+    .cell {
+      width: 40px;
+      height: 40px;
+      border: 1px solid black;
+      cursor: pointer;
+    }
+
+    .start {
+      background-color: #007bff;
+    }
+
+    /* Color azul para el estado de inicio */
+    .end {
+      background-color: #28a745;
+    }
+
+    /* Color verde para el estado de fin */
+    .obstacle {
+      background-color: #343a40;
+    }
+
+    /* Color negro para el estado de obstáculo */
+    .visited {
+      background-color: #6c757d;
+    }
+
+    /* Color gris para el camino visitado */
+    .path {
+      background-color: #dc3545;
+    }
+
+    /* Color rojo para el camino óptimo */
+    .row {
+      display: flex;
+    }
+
+    #maze {
+      display: flex;
+      flex-wrap: wrap;
+      width: 480px;
+      /* Tamaño total de la cuadrícula (12 celdas de 30px cada una) */
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+    <h1 class="mt-4 mb-4">Online Search Agent</h1>
+
+    <!-- Botones para definir el tipo de celda -->
+    <div class="mb-4">
+      <button id="startButton" class="btn btn-primary mr-2">Inicio</button>
+      <button id="endButton" class="btn btn-success mr-2">Meta</button>
+      <button id="obstacleButton" class="btn btn-dark">Obstáculo</button>
+
+    </div>
+
+    <!-- Cuadrícula del laberinto -->
+    <div id="maze"></div> <br>
+
+    <div class="mb-4">
+      <button id="exploreButton" class="btn btn-info">Explorar</button>
+      <button id="resetButton" class="btn btn-warning">Limpiar</button>
+    </div>
+
+  </div>
+
+
+  <script>
+    let selectedType = ''; // Tipo de celda seleccionado
+    let mazeSize = 12; // Tamaño del laberinto
+    let maze = []; // Laberinto representado como una matriz de 2D
+    let startCell = null; // Celda de inicio
+    let endCell = null; // Celda de fin
+    let shortestPath = []; // Ruta más corta encontrada
+
+    // Función para inicializar el laberinto
+    function initMaze() {
+      const mazeDiv = document.getElementById('maze');
+
+      for (let i = 0; i < mazeSize; i++) {
+        maze[i] = [];
+        for (let j = 0; j < mazeSize; j++) {
+          let cell = document.createElement('div');
+          cell.classList.add('cell');
+          cell.dataset.row = i; // Almacenar la fila en el atributo de datos
+          cell.dataset.col = j; // Almacenar la columna en el atributo de datos
+          cell.addEventListener('click', () => paintCell(cell)); // Evento de clic en la celda
+          mazeDiv.appendChild(cell);
+          maze[i][j] = cell;
+        }
+      }
+    }
+
+    // Función para cambiar el estado de una celda
+    function paintCell(cell) {
+      if (selectedType === 'start') {
+        if (startCell) startCell.classList.remove('start');
+        startCell = cell;
+      } else if (selectedType === 'end') {
+        if (endCell) endCell.classList.remove('end');
+        endCell = cell;
+      }
+
+      if (cell.classList.contains(selectedType)) {
+        cell.classList.remove(selectedType); // Si la celda ya tiene la clase seleccionada, la eliminamos
+      } else {
+        // Si no, pintamos la celda con la clase seleccionada
+        cell.className = 'cell ' + selectedType;
+      }
+    }
+
+    // Función para definir el tipo de celda según el botón seleccionado
+    function setCellType(type) {
+      selectedType = type;
+    }
+
+    // Función para iniciar la búsqueda desde la celda de inicio
+    function exploreMaze() {
+      resetMaze();
+
+      if (!startCell || !endCell) {
+        alert('Debes definir la celda de inicio y la celda de fin.');
+        return;
+      }
+
+      let currentPath = [];
+      dfs(parseInt(startCell.dataset.row), parseInt(startCell.dataset.col), currentPath);
+    }
+
+    // Función de búsqueda en profundidad (DFS)
+    function dfs(row, col, currentPath) {
+      if (row < 0 || col < 0 || row >= mazeSize || col >= mazeSize || maze[row][col].classList.contains('obstacle') || maze[row][col].classList.contains('visited')) {
+        return;
+      }
+
+      maze[row][col].classList.add('visited');
+      currentPath.push({ row: row, col: col });
+
+      if (maze[row][col] === endCell) {
+        shortestPath = currentPath.slice();
+        paintShortestPath();
+        return; // Detener la búsqueda una vez que se encuentra la meta
+      }
+
+      setTimeout(() => {
+        dfs(row + 1, col, currentPath.slice());
+        dfs(row, col + 1, currentPath.slice());
+        dfs(row - 1, col, currentPath.slice());
+        dfs(row, col - 1, currentPath.slice());
+      }, 1000);
+    }
+
+
+    // Función para pintar el camino más corto encontrado en rojo
+    function paintShortestPath() {
+      shortestPath.forEach(cell => {
+        maze[cell.row][cell.col].classList.add('path');
+      });
+    }
+
+    // Función para reiniciar el laberinto eliminando los caminos visitados y el camino óptimo
+    function resetMaze() {
+      for (let i = 0; i < mazeSize; i++) {
+        for (let j = 0; j < mazeSize; j++) {
+          if (maze[i][j].classList.contains('visited')) {
+            maze[i][j].classList.remove('visited');
+          }
+          if (maze[i][j].classList.contains('path')) {
+            maze[i][j].classList.remove('path');
+          }
+        }
+      }
+      shortestPath = [];
+    }
+
+    // Evento de clic en el botón de inicio
+    document.getElementById('startButton').addEventListener('click', () => setCellType('start'));
+
+    // Evento de clic en el botón de meta
+    document.getElementById('endButton').addEventListener('click', () => setCellType('end'));
+
+    // Evento de clic en el botón de obstáculo
+    document.getElementById('obstacleButton').addEventListener('click', () => setCellType('obstacle'));
+
+    // Evento de clic en el botón de explorar
+    document.getElementById('exploreButton').addEventListener('click', exploreMaze);
+
+    // Evento de clic en el botón de limpiar
+    document.getElementById('resetButton').addEventListener('click', () => location.reload());
+
+    // Inicializar el laberinto cuando se cargue la página
+    document.addEventListener('DOMContentLoaded', initMaze);
+  </script>
+
+</body>
+
+</html>
